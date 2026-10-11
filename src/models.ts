@@ -168,13 +168,52 @@ function readResponseText(provider: Provider, data: unknown): string | undefined
   return payload?.candidates?.[0]?.content?.parts?.[0]?.text;
 }
 
+// Both providers say whether they stopped early. Gemini calls it finishReason
+// and uses MAX_TOKENS, DeepSeek uses finish_reason and "length".
+function readFinishReason(provider: Provider, data: unknown): string | undefined {
+  const payload = data as {
+    candidates?: { finishReason?: string }[];
+    choices?: { finish_reason?: string }[];
+  };
+
+  if (provider === 'deepseek') {
+    return payload?.choices?.[0]?.finish_reason;
+  }
+  return payload?.candidates?.[0]?.finishReason;
+}
+
+function outputWasCutOff(finishReason: string | undefined): boolean {
+  if (!finishReason) return false;
+  return /max_tokens|length/i.test(finishReason);
+}
+
+function parseJsonReply(reply: ModelReply, providerLabel: string): unknown {
+  try {
+    return JSON.parse(cleanJsonResponse(reply.text));
+  } catch {
+    if (outputWasCutOff(reply.finishReason)) {
+      throw new Error(
+        `${providerLabel} ran out of room before finishing the JSON. Try fewer cards or shorter material.`
+      );
+    }
+    throw new Error(
+      `${providerLabel} sent back something that was not valid JSON (finished with "${reply.finishReason ?? 'unknown'}"). Try again.`
+    );
+  }
+}
+
+interface ModelReply {
+  text: string;
+  finishReason?: string;
+}
+
 async function callModel(
   apiKey: string,
   model: string,
   systemInstruction: string,
   userPrompt: string,
   extra?: { maxTokens?: number; disableThinking?: boolean; timeoutMs?: number }
-): Promise<string> {
+): Promise<ModelReply> {
   const modelId = model.replace(/^models\//, '') || DEFAULT_MODEL;
   const provider = modelProvider(modelId);
   const { url, init } = buildRequest(
@@ -237,7 +276,7 @@ async function callModel(
     // DeepSeek's JSON mode is documented to occasionally return empty content
     throw new Error(`${providerLabel} returned an empty response. Try again.`);
   }
-  return text;
+  return { text, finishReason: readFinishReason(provider, data) };
 }
 
 function parseCard(item: Record<string, unknown>, index: number): Flashcard | null {
@@ -273,15 +312,17 @@ ${options.userNotes ? `\nStudent notes / focus areas:\n${options.userNotes}\n` :
 Extracted material:
 ${options.extractedContext.slice(0, 50000)}`;
 
-  const rawJson = await callModel(
-    options.apiKey,
-    options.model || DEFAULT_MODEL,
-    PROMPTS.generateCardsSystem,
-    userPrompt,
-    { maxTokens: 3500 }
-  );
+  const modelId = options.model || DEFAULT_MODEL;
+  const reply = await callModel(options.apiKey, modelId, PROMPTS.generateCardsSystem, userPrompt, {
+    // a 25 card deck with explanations is a long reply, and DeepSeek counts its
+    // reasoning tokens against this limit as well
+    maxTokens: 8000,
+    // making cards does not need a reasoning pass, and skipping it leaves the
+    // whole budget for the JSON so the reply is less likely to be cut off
+    disableThinking: true,
+  });
 
-  const parsed = JSON.parse(cleanJsonResponse(rawJson));
+  const parsed = parseJsonReply(reply, PROVIDERS[modelProvider(modelId)].label);
   if (!Array.isArray(parsed)) {
     throw new Error('Expected a JSON array of flashcards back from the model.');
   }
@@ -321,18 +362,15 @@ ${options.explanation ? `Background: "${options.explanation}"` : ''}
 
 Give exactly 1 concise sentence (under 25 words) in Kimika's voice.`;
 
-  const rawJson = await callModel(
-    options.apiKey,
-    options.model || DEFAULT_MODEL,
-    PROMPTS.gradeAnswerSystem,
-    userPrompt,
-    {
-      maxTokens: 100,
-      disableThinking: true,
-      timeoutMs: options.timeoutMs,
-    }
-  );
+  const modelId = options.model || DEFAULT_MODEL;
+  const reply = await callModel(options.apiKey, modelId, PROMPTS.gradeAnswerSystem, userPrompt, {
+    maxTokens: 400,
+    disableThinking: true,
+    timeoutMs: options.timeoutMs,
+  });
 
-  const parsed = JSON.parse(cleanJsonResponse(rawJson));
+  const parsed = parseJsonReply(reply, PROVIDERS[modelProvider(modelId)].label) as {
+    feedback?: string;
+  };
   return String(parsed.feedback || `Not quite. The answer is ${options.expectedAnswer}.`);
 }

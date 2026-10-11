@@ -66,6 +66,36 @@ describe('generateFlashcards', () => {
   });
 });
 
+describe('cut off replies', () => {
+  function stubReply(content: string, finishReason: string): void {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: content }] }, finishReason }],
+        }),
+      })
+    );
+  }
+
+  const options = {
+    apiKey: 'fake',
+    model: 'gemini-2.5-flash',
+    extractedContext: 'some notes',
+  };
+
+  it('explains that the reply was cut off instead of leaking a JSON parse error', async () => {
+    // a truncated array is what a maxed out token budget looks like
+    stubReply('[{"question":"a","answer":"b","options":["b"', 'MAX_TOKENS');
+    await expect(generateFlashcards(options)).rejects.toThrow(/ran out of room/i);
+  });
+
+  it('reports a bad reply when the model stopped for another reason', async () => {
+    stubReply('this is not json at all', 'STOP');
+    await expect(generateFlashcards(options)).rejects.toThrow(/not valid JSON/i);
+  });
+});
+
 describe('gradeAnswer', () => {
   it('is only called for a wrong answer, and returns just the feedback text', async () => {
     const fetchSpy = vi.fn(() =>
