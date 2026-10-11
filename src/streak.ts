@@ -19,12 +19,24 @@ export function getStreakTier(streakCount: number): StreakTier {
   return 'nostreak';
 }
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+export type Provider = 'gemini' | 'deepseek';
 
-export const GEMINI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash (Latest)' },
-];
+export const AI_MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini' },
+  { id: 'gemini-flash-latest', name: 'Gemini Flash (Latest)', provider: 'gemini' },
+  { id: 'deepseek-flash', name: 'DeepSeek Flash', provider: 'deepseek' },
+  { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'deepseek' },
+] as const;
+
+export const DEFAULT_MODEL = 'gemini-2.5-flash';
+
+export function modelProvider(modelId: string): Provider {
+  const match = AI_MODELS.find((m) => m.id === modelId);
+  if (!match) {
+    throw new Error(`Unknown model: ${modelId}`);
+  }
+  return match.provider;
+}
 
 export const INITIAL_STREAK_STATE: StreakState = {
   currentWinStreak: 0,

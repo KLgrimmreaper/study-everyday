@@ -2,7 +2,8 @@ import React, { createContext, useContext, useState } from 'react';
 import { FlashcardDeck, GradingResult } from './types';
 import { GamePhase, StreakState, AnsweredQuestionRecord, SavedStudySession } from './types';
 import { INITIAL_STREAK_STATE, recordAnswerResult } from './streak';
-import { DEFAULT_GEMINI_MODEL } from './streak';
+import { DEFAULT_MODEL, Provider, modelProvider } from './streak';
+import { getApiKey, setApiKey as storeApiKey } from './apiKeys';
 import { BACKGROUNDS } from './sprites';
 import { saveStudySession, formatSessionDate } from './storage';
 
@@ -17,6 +18,7 @@ interface GameContextType {
 
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  provider: Provider;
   apiKey: string;
   setApiKey: (key: string) => void;
 
@@ -48,14 +50,21 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('menu');
   const [selectedBackground, setSelectedBackground] = useState<string>(BACKGROUNDS[0].path);
 
-  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_GEMINI_MODEL);
-  const [apiKey, setApiKeyState] = useState<string>(() => {
-    return sessionStorage.getItem('study_everyday_key') || '';
-  });
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
+  const provider = modelProvider(selectedModel);
+
+  // each provider gets its own stored key, so switching models does not make
+  // you paste the other one in again
+  const [apiKey, setApiKeyState] = useState<string>(() => getApiKey(modelProvider(DEFAULT_MODEL)));
 
   const setApiKey = (key: string) => {
     setApiKeyState(key);
-    sessionStorage.setItem('study_everyday_key', key);
+    storeApiKey(provider, key);
+  };
+
+  const changeModel = (model: string) => {
+    setSelectedModel(model);
+    setApiKeyState(getApiKey(modelProvider(model)));
   };
 
   const [deck, setDeck] = useState<FlashcardDeck | null>(null);
@@ -165,7 +174,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         selectedBackground,
         setSelectedBackground,
         selectedModel,
-        setSelectedModel,
+        setSelectedModel: changeModel,
+        provider,
         apiKey,
         setApiKey,
         deck,

@@ -1,6 +1,6 @@
 import { Flashcard, GradingResult } from './types';
 import { checkExactMatch } from './grading';
-import { DEFAULT_GEMINI_MODEL } from './streak';
+import { DEFAULT_MODEL, Provider, modelProvider } from './streak';
 
 export const PROMPTS = {
   generateCardsSystem: `You are helping a student make multiple-choice study flashcards from lecture material.
@@ -65,15 +65,62 @@ export interface GradeAnswerOptions {
   timeoutMs?: number;
 }
 
-async function callGemini(
+interface ProviderInfo {
+  label: string;
+  keyPlaceholder: string;
+  keyLink: string;
+  keyLinkText: string;
+  keyNote: string;
+}
+
+export const PROVIDERS: Record<Provider, ProviderInfo> = {
+  gemini: {
+    label: 'Google Gemini',
+    keyPlaceholder: 'AIzaSy...',
+    keyLink: 'https://aistudio.google.com/app/apikey',
+    keyLinkText: 'Get a key (Google AI Studio)',
+    keyNote: 'Saved in this tab, then sent to Google from your browser.',
+  },
+  deepseek: {
+    label: 'DeepSeek',
+    keyPlaceholder: 'sk-...',
+    keyLink: 'https://platform.deepseek.com/api_keys',
+    keyLinkText: 'Get a key (DeepSeek Platform)',
+    keyNote: 'Saved in this tab, then sent to DeepSeek from your browser.',
+  },
+};
+
+function buildRequest(
+  provider: Provider,
   apiKey: string,
   model: string,
   systemInstruction: string,
   userPrompt: string,
-  extra?: { maxTokens?: number; disableThinking?: boolean; timeoutMs?: number }
-): Promise<string> {
-  const modelName = model.replace(/^models\//, '') || DEFAULT_GEMINI_MODEL;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+  extra?: { maxTokens?: number; disableThinking?: boolean }
+): { url: string; init: RequestInit } {
+  if (provider === 'deepseek') {
+    return {
+      url: 'https://api.deepseek.com/chat/completions',
+      init: {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemInstruction },
+            { role: 'user', content: userPrompt },
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.2,
+          ...(extra?.maxTokens ? { max_tokens: extra.maxTokens } : {}),
+          ...(extra?.disableThinking ? { thinking: { type: 'disabled' } } : {}),
+        }),
+      },
+    };
+  }
 
   const generationConfig: Record<string, unknown> = {
     responseMimeType: 'application/json',
@@ -90,14 +137,9 @@ async function callGemini(
     generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
 
-  let res: Response;
-  const controller = new AbortController();
-  const timeoutId = extra?.timeoutMs
-    ? setTimeout(() => controller.abort(), extra.timeoutMs)
-    : undefined;
-
-  try {
-    res = await fetch(url, {
+  return {
+    url: `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey.trim())}`,
+    init: {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -109,22 +151,64 @@ async function callGemini(
         ],
         generationConfig,
       }),
-      signal: controller.signal,
-    });
+    },
+  };
+}
+
+function readResponseText(provider: Provider, data: unknown): string | undefined {
+  const payload = data as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    choices?: { message?: { content?: string } }[];
+  };
+
+  if (provider === 'deepseek') {
+    return payload?.choices?.[0]?.message?.content;
+  }
+  return payload?.candidates?.[0]?.content?.parts?.[0]?.text;
+}
+
+async function callModel(
+  apiKey: string,
+  model: string,
+  systemInstruction: string,
+  userPrompt: string,
+  extra?: { maxTokens?: number; disableThinking?: boolean; timeoutMs?: number }
+): Promise<string> {
+  const modelId = model.replace(/^models\//, '') || DEFAULT_MODEL;
+  const provider = modelProvider(modelId);
+  const { url, init } = buildRequest(
+    provider,
+    apiKey,
+    modelId,
+    systemInstruction,
+    userPrompt,
+    extra
+  );
+
+  let res: Response;
+  const controller = new AbortController();
+  const timeoutId = extra?.timeoutMs
+    ? setTimeout(() => controller.abort(), extra.timeoutMs)
+    : undefined;
+
+  try {
+    res = await fetch(url, { ...init, signal: controller.signal });
   } catch (err) {
     // aborting actually cancels the request instead of letting it finish in
     // the background and waste the API quota
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error('Gemini took too long to respond.');
+      throw new Error('The model took too long to respond.');
     }
     throw err;
   } finally {
     if (timeoutId !== undefined) clearTimeout(timeoutId);
   }
 
+  const providerLabel = PROVIDERS[provider].label;
+
   if (!res.ok) {
     const errorText = await res.text();
-    let errorMsg = `Gemini API error (${res.status})`;
+    let errorMsg = `${providerLabel} API error (${res.status})`;
     try {
       const errorJson = JSON.parse(errorText);
       if (errorJson?.error?.message) {
@@ -134,19 +218,23 @@ async function callGemini(
       // keep the status message
     }
 
-    if (res.status === 400 || res.status === 403) {
-      throw new Error(`${errorMsg}. Check that your Google AI Studio API key is correct.`);
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(`${errorMsg}. Check that your ${providerLabel} API key is correct.`);
     }
     if (res.status === 429) {
-      throw new Error('Gemini rate limit hit. Wait a bit and try again.');
+      throw new Error(`${providerLabel} rate limit hit. Wait a bit and try again.`);
+    }
+    if (res.status === 400 && /model/i.test(errorMsg)) {
+      throw new Error(`${errorMsg}. Check that this model is still available.`);
     }
     throw new Error(errorMsg);
   }
 
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const text = readResponseText(provider, data);
   if (!text) {
-    throw new Error('Gemini returned an empty response.');
+    // DeepSeek's JSON mode is documented to occasionally return empty content
+    throw new Error(`${providerLabel} returned an empty response. Try again.`);
   }
   return text;
 }
@@ -184,9 +272,9 @@ ${options.userNotes ? `\nStudent notes / focus areas:\n${options.userNotes}\n` :
 Extracted material:
 ${options.extractedContext.slice(0, 50000)}`;
 
-  const rawJson = await callGemini(
+  const rawJson = await callModel(
     options.apiKey,
-    options.model || DEFAULT_GEMINI_MODEL,
+    options.model || DEFAULT_MODEL,
     PROMPTS.generateCardsSystem,
     userPrompt,
     { maxTokens: 3500 }
@@ -194,7 +282,7 @@ ${options.extractedContext.slice(0, 50000)}`;
 
   const parsed = JSON.parse(cleanJsonResponse(rawJson));
   if (!Array.isArray(parsed)) {
-    throw new Error('Expected a JSON array of flashcards from Gemini.');
+    throw new Error('Expected a JSON array of flashcards back from the model.');
   }
 
   const cards = parsed
@@ -202,7 +290,7 @@ ${options.extractedContext.slice(0, 50000)}`;
     .filter((card): card is Flashcard => card !== null);
 
   if (cards.length === 0) {
-    throw new Error('Gemini did not return any complete flashcards. Try again or add more notes.');
+    throw new Error('No complete flashcards came back. Try again or add more notes.');
   }
 
   return cards;
@@ -221,9 +309,9 @@ ${options.explanation ? `Background: "${options.explanation}"` : ''}
 
 Give exactly 1 concise sentence (under 25 words) in Kimika's voice.`;
 
-  const rawJson = await callGemini(
+  const rawJson = await callModel(
     options.apiKey,
-    options.model || DEFAULT_GEMINI_MODEL,
+    options.model || DEFAULT_MODEL,
     PROMPTS.gradeAnswerSystem,
     userPrompt,
     {

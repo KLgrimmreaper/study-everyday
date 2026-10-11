@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
 import { BACKGROUNDS } from '../sprites';
-import { generateFlashcards } from '../gemini';
-import { GEMINI_MODELS } from '../streak';
+import { generateFlashcards, PROVIDERS } from '../gemini';
+import { AI_MODELS } from '../streak';
 import { parseDocumentFile, ParsedFileResult } from '../parseFiles';
 import { FeatherGraphic } from '../FeatherGraphic';
 
@@ -35,11 +35,14 @@ export const SetupScreen: React.FC = () => {
     setSelectedBackground,
     selectedModel,
     setSelectedModel,
+    provider,
     apiKey,
     setApiKey,
     setDeck,
     setDeckSource,
   } = useGame();
+
+  const providerInfo = PROVIDERS[provider];
 
   const [cardCount, setCardCount] = useState<number>(10);
   const [parsedFiles, setParsedFiles] = useState<ParsedFileResult[]>([]);
@@ -68,7 +71,9 @@ export const SetupScreen: React.FC = () => {
     setErrorMessage(null);
 
     if (!apiKey.trim()) {
-      setErrorMessage('Please enter your Gemini API Key before generating questions.');
+      setErrorMessage(
+        `Please enter your ${providerInfo.label} API Key before generating questions.`
+      );
       return;
     }
 
@@ -93,7 +98,7 @@ export const SetupScreen: React.FC = () => {
 
       if (!generatedCards || generatedCards.length === 0) {
         throw new Error(
-          'Gemini returned an empty flashcard set. Please refine your notes or context.'
+          'The model returned an empty flashcard set. Please refine your notes or context.'
         );
       }
 
@@ -175,10 +180,10 @@ export const SetupScreen: React.FC = () => {
 
         <div className="flex flex-col md:flex-row md:items-center">
           <span className="w-full md:w-64 font-bold text-sm md:text-base text-white drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
-            •Gemini model
+            •Model
           </span>
-          <div className="flex items-center gap-2 text-sm md:text-base drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
-            {GEMINI_MODELS.map((model, idx) => (
+          <div className="flex flex-wrap items-center gap-2 text-sm md:text-base drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
+            {AI_MODELS.map((model, idx) => (
               <React.Fragment key={model.id}>
                 {idx > 0 && <span className="text-[#123652] font-black">/</span>}
                 <button
@@ -195,26 +200,26 @@ export const SetupScreen: React.FC = () => {
 
         <div className="flex flex-col md:flex-row md:items-center">
           <span className="w-full md:w-64 font-bold text-sm md:text-base text-white drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
-            •Gemini API Key
+            •{providerInfo.label} API Key
           </span>
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="AIzaSy..."
+              placeholder={providerInfo.keyPlaceholder}
               className="w-64 md:w-80 bg-[#0c2f4d]/85 border border-[#3b7fae] shadow-[inset_1px_2px_4px_rgba(0,0,0,0.8)] text-white font-mono text-xs px-2.5 py-1 rounded-xs focus:outline-none focus:border-white focus:bg-[#0c2f4d]"
             />
             <a
-              href="https://aistudio.google.com/app/apikey"
+              href={providerInfo.keyLink}
               target="_blank"
               rel="noreferrer"
               className="text-xs text-[#aee1ff] hover:text-white underline font-serif tracking-wide drop-shadow-[1px_1px_1px_rgba(0,0,0,0.8)]"
             >
-              Get a key (Google AI Studio)
+              {providerInfo.keyLinkText}
             </a>
             <span className="text-[10px] text-[#cce6f8]/80 font-serif drop-shadow-[1px_1px_1px_rgba(0,0,0,0.8)]">
-              Saved in this tab, then sent to Google from your browser.
+              {providerInfo.keyNote}
             </span>
           </div>
         </div>
