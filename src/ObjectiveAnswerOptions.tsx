@@ -41,8 +41,16 @@ export const ObjectiveAnswerOptions: React.FC = () => {
     // reliable and we can skip the network entirely instead of making the
     // student wait on a round trip for something we already know.
     const exact = checkExactMatch(option, currentCard.answer);
-    const localResult =
-      exact ?? getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
+    const localResult = exact
+      ? {
+          ...exact,
+          // the card already carries the reason the answer is right, so show
+          // that instead of a bare "correct"
+          feedback: currentCard.explanation
+            ? `Correct. ${currentCard.explanation}`
+            : exact.feedback,
+        }
+      : getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
 
     try {
       if (!apiKey.trim()) {
