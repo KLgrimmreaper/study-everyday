@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from './GameContext';
 import { gradeAnswer } from './gemini';
-import { getKimikaExplanation } from './grading';
+import { getKimikaExplanation, checkExactMatch } from './grading';
 import { Loader2 } from 'lucide-react';
 
 export const ObjectiveAnswerOptions: React.FC = () => {
@@ -37,31 +37,33 @@ export const ObjectiveAnswerOptions: React.FC = () => {
     setIsGrading(true);
     setPhase('evaluating');
 
+    // Options come from the model's own "answer" field, so a hit here is
+    // reliable and we can skip the network entirely instead of making the
+    // student wait on a round trip for something we already know.
+    const exact = checkExactMatch(option, currentCard.answer);
+    const localResult =
+      exact ?? getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
+
     try {
-      if (apiKey && apiKey.trim().length > 0) {
-        const gradingPromise = gradeAnswer({
-          apiKey,
-          model: selectedModel,
-          question: currentCard.question,
-          expectedAnswer: currentCard.answer,
-          userAnswer: option,
-          explanation: currentCard.explanation,
-        });
-
-        // 2.5s timeout so a slow network doesn't freeze the game
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('AI grading timeout')), 2500)
-        );
-
-        const grading = await Promise.race([gradingPromise, timeoutPromise]);
-        submitAnswer(grading, option);
-      } else {
-        const fallback = getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
-        submitAnswer(fallback, option);
+      if (!apiKey.trim()) {
+        submitAnswer(localResult, option);
+        return;
       }
+
+      const grading = await gradeAnswer({
+        apiKey,
+        model: selectedModel,
+        question: currentCard.question,
+        expectedAnswer: currentCard.answer,
+        userAnswer: option,
+        explanation: currentCard.explanation,
+        // aborts the request for real, so a slow call can't resolve later and
+        // overwrite the answer the student already saw
+        timeoutMs: 2500,
+      });
+      submitAnswer(grading, option);
     } catch {
-      const fallback = getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
-      submitAnswer(fallback, option);
+      submitAnswer(localResult, option);
     } finally {
       setIsGrading(false);
     }

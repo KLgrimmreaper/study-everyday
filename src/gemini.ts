@@ -62,6 +62,7 @@ export interface GradeAnswerOptions {
   expectedAnswer: string;
   userAnswer: string;
   explanation?: string;
+  timeoutMs?: number;
 }
 
 async function callGemini(
@@ -69,7 +70,7 @@ async function callGemini(
   model: string,
   systemInstruction: string,
   userPrompt: string,
-  extra?: { maxTokens?: number; disableThinking?: boolean }
+  extra?: { maxTokens?: number; disableThinking?: boolean; timeoutMs?: number }
 ): Promise<string> {
   const modelName = model.replace(/^models\//, '') || DEFAULT_GEMINI_MODEL;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
@@ -89,19 +90,37 @@ async function callGemini(
     generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${systemInstruction}\n\n---\n${userPrompt}` }],
-        },
-      ],
-      generationConfig,
-    }),
-  });
+  let res: Response;
+  const controller = new AbortController();
+  const timeoutId = extra?.timeoutMs
+    ? setTimeout(() => controller.abort(), extra.timeoutMs)
+    : undefined;
+
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemInstruction}\n\n---\n${userPrompt}` }],
+          },
+        ],
+        generationConfig,
+      }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    // aborting actually cancels the request instead of letting it finish in
+    // the background and waste the API quota
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('Gemini took too long to respond.');
+    }
+    throw err;
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -210,6 +229,7 @@ Give exactly 1 concise sentence (under 25 words) in Kimika's voice.`;
     {
       maxTokens: 100,
       disableThinking: true,
+      timeoutMs: options.timeoutMs,
     }
   );
 
