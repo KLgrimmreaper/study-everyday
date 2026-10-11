@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../GameContext';
 import { BACKGROUNDS } from '../sprites';
-import { generateFlashcards, PROVIDERS } from '../gemini';
+import { generateFlashcards, PROVIDERS } from '../models';
 import { AI_MODELS } from '../streak';
 import { parseDocumentFile, ParsedFileResult } from '../parseFiles';
 import { FeatherGraphic } from '../FeatherGraphic';
@@ -218,7 +218,7 @@ export const SetupScreen: React.FC = () => {
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={providerInfo.keyPlaceholder}
-              className="w-64 md:w-80 bg-[#0c2f4d]/85 border border-[#3b7fae] shadow-[inset_1px_2px_4px_rgba(0,0,0,0.8)] text-white font-mono text-xs px-2.5 py-1 rounded-xs focus:outline-none focus:border-white focus:bg-[#0c2f4d]"
+              className="w-64 md:w-80 bg-[#0c2f4d]/85 border border-[#3b7fae] shadow-[inset_1px_2px_4px_rgba(0,0,0,0.8)] text-white font-mono text-xs px-2.5 py-1 rounded-sm focus:outline-none focus:border-white focus:bg-[#0c2f4d]"
             />
             <a
               href={providerInfo.keyLink}
@@ -239,7 +239,7 @@ export const SetupScreen: React.FC = () => {
             •Study Material
           </span>
           <div className="flex flex-wrap items-center gap-3">
-            <label className="cursor-pointer bg-gradient-to-b from-[#87a5b4] via-[#658797] to-[#456574] border-t border-[#bce0f0] border-b-2 border-r border-[#1e2f37] border-l border-[#2e4450] text-[#12222a] font-serif font-black text-xs px-3.5 py-1 rounded-xs hover:brightness-110 active:translate-y-[1px] shadow-sm">
+            <label className="cursor-pointer bg-gradient-to-b from-[#87a5b4] via-[#658797] to-[#456574] border-t border-[#bce0f0] border-b-2 border-r border-[#1e2f37] border-l border-[#2e4450] text-[#12222a] font-serif font-black text-xs px-3.5 py-1 rounded-sm hover:brightness-110 active:translate-y-[1px] shadow-sm">
               Upload Slides / Notes (.pdf, .pptx, .txt)...
               <input
                 type="file"
@@ -277,7 +277,7 @@ export const SetupScreen: React.FC = () => {
             onChange={(e) => setUserNotes(e.target.value)}
             placeholder="Optional: Specific teacher guidelines, formulas, or key definitions to focus on..."
             rows={2}
-            className="w-full max-w-xl bg-[#0c2f4d]/85 border border-[#3b7fae] shadow-[inset_1px_2px_4px_rgba(0,0,0,0.8)] text-white text-xs px-2.5 py-1.5 rounded-xs focus:outline-none focus:border-white placeholder:text-cyan-200/40"
+            className="w-full max-w-xl bg-[#0c2f4d]/85 border border-[#3b7fae] shadow-[inset_1px_2px_4px_rgba(0,0,0,0.8)] text-white text-xs px-2.5 py-1.5 rounded-sm focus:outline-none focus:border-white placeholder:text-cyan-200/40"
           />
         </div>
 
@@ -295,7 +295,7 @@ export const SetupScreen: React.FC = () => {
                   onClick={() => setCardCount(opt.count)}
                   className={`group relative flex flex-col items-center justify-between p-2.5 rounded-lg border transition-all text-center cursor-pointer ${
                     isSelected
-                      ? 'bg-[#ffffff]/30 border-white shadow-[0_0_14px_rgba(255,255,255,0.8)] scale-103 ring-1 ring-white/60'
+                      ? 'bg-[#ffffff]/30 border-white shadow-[0_0_14px_rgba(255,255,255,0.8)] scale-[1.03] ring-1 ring-white/60'
                       : 'bg-[#0f3d64]/50 border-[#4a85af]/60 hover:bg-[#1c5584]/60 hover:border-white/70'
                   }`}
                 >

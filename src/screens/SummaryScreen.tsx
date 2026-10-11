@@ -120,7 +120,7 @@ export const SummaryScreen: React.FC = () => {
           </span>
         </div>
 
-        <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-2 scrollbar-thin border-t border-[#4f92bf]/50 pt-3">
+        <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-2 border-t border-[#4f92bf]/50 pt-3">
           {filteredRecords.length === 0 ? (
             <div className="py-10 text-center text-[#cce8fb] font-serif italic text-sm drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
               No questions found for this filter.
@@ -143,7 +143,7 @@ export const SummaryScreen: React.FC = () => {
                         Q{String(idx + 1).padStart(2, '0')}
                       </span>
                       {record.card.sourceTopic && (
-                        <span className="text-[10px] uppercase font-sans font-bold bg-[#092238]/70 border border-[#407f9e] px-2 py-0.2 rounded-xs text-[#b8e2f8]">
+                        <span className="text-[10px] uppercase font-sans font-bold bg-[#092238]/70 border border-[#407f9e] px-2 py-0.5 rounded-sm text-[#b8e2f8]">
                           {record.card.sourceTopic}
                         </span>
                       )}
@@ -166,7 +166,7 @@ export const SummaryScreen: React.FC = () => {
                     {record.card.question}
                   </h3>
 
-                  <div className="bg-[#0b253d]/80 border border-[#3b7fae]/70 rounded-xs p-2.5 space-y-1 text-xs md:text-sm font-serif mb-2 text-[#e3f2fd]">
+                  <div className="bg-[#0b253d]/80 border border-[#3b7fae]/70 rounded-sm p-2.5 space-y-1 text-xs md:text-sm font-serif mb-2 text-[#e3f2fd]">
                     <div className="flex items-start gap-2">
                       <span className="text-[#8ec5eb] font-bold w-24 shrink-0">Your Choice:</span>
                       <span
@@ -191,7 +191,7 @@ export const SummaryScreen: React.FC = () => {
                   </div>
 
                   {record.grading.feedback && (
-                    <div className="bg-[#071d30]/75 border-l-3 border-[#67b5e8] px-3 py-1.5 rounded-r-xs text-xs md:text-sm font-serif italic text-[#cbe6fa] drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)] mb-1.5">
+                    <div className="bg-[#071d30]/75 border-l-4 border-[#67b5e8] px-3 py-1.5 rounded-r-sm text-xs md:text-sm font-serif italic text-[#cbe6fa] drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)] mb-1.5">
                       <strong className="not-italic text-white mr-1.5 font-bold">Kimika:</strong>
                       <span>{record.grading.feedback}</span>
                     </div>

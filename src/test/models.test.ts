@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { gradeAnswer, PROVIDERS } from '../gemini';
+import { gradeAnswer, PROVIDERS } from '../models';
 import { AI_MODELS, modelProvider } from '../streak';
 
 afterEach(() => {

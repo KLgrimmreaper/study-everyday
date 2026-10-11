@@ -19,7 +19,7 @@ export const ResultFeedback: React.FC = () => {
   if (phase !== 'correct' && phase !== 'wrong') return null;
 
   return (
-    <div className="pt-2 animate-in fade-in duration-300">
+    <div className="pt-2 animate-fade-in">
       <div className="text-slate-800 text-sm md:text-base font-serif leading-relaxed space-y-2">
         <p className="italic">{lastGrading?.feedback}</p>
         {streakState.escapedHighLoseStreak && (
