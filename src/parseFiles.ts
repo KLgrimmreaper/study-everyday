@@ -1,4 +1,3 @@
-import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 
 export interface ParsedFileResult {
@@ -34,10 +33,18 @@ export async function parseDocumentFile(file: File): Promise<ParsedFileResult> {
   };
 }
 
-// Configure pdfjs worker for Vite client-side bundle
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+// pdf.js is about 1MB, so it is loaded on demand rather than on every page
+// load. The worker is bundled with the app instead of pulled from a CDN, so
+// PDF import still works offline.
+async function getPdfjs() {
+  const pdfjsLib = await import('pdfjs-dist');
+  const workerUrl = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+  return pdfjsLib;
+}
 
 export async function parsePdfFile(file: File): Promise<string> {
+  const pdfjsLib = await getPdfjs();
   const arrayBuffer = await file.arrayBuffer();
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
   const pdfDocument = await loadingTask.promise;
