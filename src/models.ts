@@ -1,5 +1,4 @@
-import { Flashcard, GradingResult } from './types';
-import { checkExactMatch } from './grading';
+import { Flashcard } from './types';
 import { DEFAULT_MODEL, Provider, modelProvider } from './streak';
 
 export const PROMPTS = {
@@ -27,10 +26,12 @@ No markdown, no extra text.`,
   gradeAnswerSystem: `You are Kimika Tachibana from Wonderful Everyday (Subarashiki Hibi), acting as a sharp but caring study partner.
 Speak in first person, like visual novel dialogue. Do not sound like a generic grader.
 
+The answer has already been marked wrong by comparing it with the correct one,
+so do not restate the whole correct answer. Just react to the mistake and point
+at what to reconsider.
+
 Return ONLY JSON:
 {
-  "isCorrect": boolean,
-  "score": number,
   "feedback": "string"
 }
 
@@ -293,15 +294,26 @@ ${options.extractedContext.slice(0, 50000)}`;
     throw new Error('No complete flashcards came back. Try again or add more notes.');
   }
 
-  return cards;
+  // the model tends to put the correct answer first, so shuffle the options here
+  // rather than at render time, or the buttons would move on every re-render.
+  // The answer is matched by value, never by position, so this is safe.
+  return cards.map((card) => (card.options ? { ...card, options: shuffle(card.options) } : card));
 }
 
-export async function gradeAnswer(options: GradeAnswerOptions): Promise<GradingResult> {
-  const exactResult = checkExactMatch(options.userAnswer, options.expectedAnswer);
-  if (exactResult !== null) {
-    return exactResult;
+function shuffle<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
   }
+  return copy;
+}
 
+// Only used to phrase a reaction to a wrong answer. Whether the answer is
+// correct is decided by checkExactMatch, because the model does not need to be
+// asked something the app already knows, and letting it decide meant wrong
+// answers could be marked right.
+export async function gradeAnswer(options: GradeAnswerOptions): Promise<string> {
   const userPrompt = `Flashcard Question: "${options.question}"
 Correct Answer: "${options.expectedAnswer}"
 Student chose: "${options.userAnswer}"
@@ -322,12 +334,5 @@ Give exactly 1 concise sentence (under 25 words) in Kimika's voice.`;
   );
 
   const parsed = JSON.parse(cleanJsonResponse(rawJson));
-  return {
-    isCorrect: Boolean(parsed.isCorrect),
-    score: Number(parsed.score ?? 0),
-    feedback: String(parsed.feedback || `Not quite. The answer is ${options.expectedAnswer}.`),
-    suggestedImprovement: parsed.suggestedImprovement
-      ? String(parsed.suggestedImprovement)
-      : undefined,
-  };
+  return String(parsed.feedback || `Not quite. The answer is ${options.expectedAnswer}.`);
 }

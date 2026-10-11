@@ -37,28 +37,36 @@ export const ObjectiveAnswerOptions: React.FC = () => {
     setIsGrading(true);
     setPhase('evaluating');
 
-    // Options come from the model's own "answer" field, so a hit here is
-    // reliable and we can skip the network entirely instead of making the
-    // student wait on a round trip for something we already know.
+    // The options are the model's own "answer" strings, so comparing them is
+    // authoritative and free. The app decides right from wrong here; the model
+    // is only asked to phrase a reaction when the answer is wrong.
     const exact = checkExactMatch(option, currentCard.answer);
-    const localResult = exact
-      ? {
+
+    if (exact) {
+      // the card already carries the reason the answer is right, so show that
+      // instead of a bare "correct"
+      submitAnswer(
+        {
           ...exact,
-          // the card already carries the reason the answer is right, so show
-          // that instead of a bare "correct"
           feedback: currentCard.explanation
             ? `Correct. ${currentCard.explanation}`
             : exact.feedback,
-        }
-      : getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
+        },
+        option
+      );
+      setIsGrading(false);
+      return;
+    }
+
+    const wrongResult = getKimikaExplanation(option, currentCard.answer, currentCard.explanation);
 
     try {
       if (!apiKey.trim()) {
-        submitAnswer(localResult, option);
+        submitAnswer(wrongResult, option);
         return;
       }
 
-      const grading = await gradeAnswer({
+      const feedback = await gradeAnswer({
         apiKey,
         model: selectedModel,
         question: currentCard.question,
@@ -69,9 +77,11 @@ export const ObjectiveAnswerOptions: React.FC = () => {
         // overwrite the answer the student already saw
         timeoutMs: 2500,
       });
-      submitAnswer(grading, option);
+      // isCorrect stays false no matter what the model says - it was compared
+      // against the expected answer above and did not match
+      submitAnswer({ ...wrongResult, feedback }, option);
     } catch {
-      submitAnswer(localResult, option);
+      submitAnswer(wrongResult, option);
     } finally {
       setIsGrading(false);
     }

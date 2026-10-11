@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { gradeAnswer, PROVIDERS } from '../models';
+import { gradeAnswer, generateFlashcards, PROVIDERS } from '../models';
 import { AI_MODELS, modelProvider } from '../streak';
 
 afterEach(() => {
@@ -24,21 +24,71 @@ describe('provider routing', () => {
   });
 });
 
+describe('generateFlashcards', () => {
+  it('does not always put the correct answer in the first slot', async () => {
+    const cardJson = JSON.stringify([
+      {
+        question: 'Which of these is a valid PHP variable name?',
+        answer: '$city',
+        options: ['$city', '$city name', '$1city', 'city$'],
+        explanation: 'The dollar sign comes first.',
+      },
+    ]);
+
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: cardJson }] } }],
+        }),
+      })
+    );
+
+    const positions = new Set<number>();
+
+    for (let i = 0; i < 20; i++) {
+      const cards = await generateFlashcards({
+        apiKey: 'fake',
+        model: 'gemini-2.5-flash',
+        extractedContext: 'php variables',
+      });
+      const card = cards[0];
+      positions.add(card.options!.indexOf(card.answer));
+
+      // the shuffle must not lose or duplicate an option
+      expect(card.options).toHaveLength(4);
+      expect(new Set(card.options).size).toBe(4);
+      expect(card.options).toContain(card.answer);
+    }
+
+    // over 20 generations the answer should not sit in one slot every time
+    expect(positions.size).toBeGreaterThan(1);
+  });
+});
+
 describe('gradeAnswer', () => {
-  it('answers an exact match without calling the API at all', async () => {
-    const fetchSpy = vi.fn();
+  it('is only called for a wrong answer, and returns just the feedback text', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: '{"feedback":"not really"}' }] } }],
+        }),
+      })
+    );
     vi.stubGlobal('fetch', fetchSpy);
 
-    const result = await gradeAnswer({
+    const feedback = await gradeAnswer({
       apiKey: 'fake',
       model: 'gemini-2.5-flash',
       question: 'Which organelle makes ATP?',
       expectedAnswer: 'Mitochondria',
-      userAnswer: 'mitochondria',
+      userAnswer: 'the golgi body',
     });
 
-    expect(result.isCorrect).toBe(true);
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // a correct answer never reaches this function, so the call must happen
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(feedback).toBe('not really');
   });
 
   it('builds an OpenAI-style request for deepseek with a bearer token', async () => {
@@ -48,12 +98,12 @@ describe('gradeAnswer', () => {
       return Promise.resolve({
         ok: true,
         json: async () => ({
-          choices: [{ message: { content: '{"isCorrect":false,"score":0,"feedback":"nope"}' } }],
+          choices: [{ message: { content: '{"feedback":"not quite"}' } }],
         }),
       });
     });
 
-    const result = await gradeAnswer({
+    const feedback = await gradeAnswer({
       apiKey: 'sk-test-key',
       model: 'deepseek-flash',
       question: 'Which organelle makes ATP?',
@@ -77,8 +127,7 @@ describe('gradeAnswer', () => {
     expect(body.messages[1].content).toContain('golgi body');
 
     // and the response is read from choices[], not candidates[]
-    expect(result.isCorrect).toBe(false);
-    expect(result.feedback).toBe('nope');
+    expect(feedback).toBe('not quite');
   });
 
   it('aborts the request when it runs past the timeout', async () => {
