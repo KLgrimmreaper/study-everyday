@@ -1,0 +1,14 @@
+# Keep line endings consistent for everyone who clones this.
+# Without this, Windows machines rewrite files to CRLF and Linux/Mac to LF,
+# which makes diffs show whole files as changed.
+* text=auto eol=lf
+
+# Images are binary - never touch them
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Lockfile is generated, keep it out of diffs noise
+package-lock.json -diff linguist-generated
