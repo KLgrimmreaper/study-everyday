@@ -1,10 +1,14 @@
 import { GradingResult } from './types';
 
 export function normalizeAnswer(text: string): string {
+  // Only typographic punctuation is ignored. Characters that carry meaning in a
+  // subject - $ % ^ & * = - are kept, because dropping them made different
+  // answers compare equal. "city$" and "$city" both used to normalise to
+  // "city", so a wrong PHP answer was graded as correct.
   return text
     .toLowerCase()
     .trim()
-    .replace(/[.,/#!$%^&*;:{}=_`~()?"'’-]/g, '')
+    .replace(/[.,/#!;:?`~()"'’]/g, '')
     .replace(/\s+/g, ' ');
 }
 

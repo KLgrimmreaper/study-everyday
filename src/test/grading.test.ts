@@ -7,10 +7,30 @@ describe('Grading utils', () => {
     expect(normalizeAnswer("It's a test.")).toBe('its a test');
   });
 
-  it('strips hyphens and defers spaced/hyphenated variants to AI grading', () => {
-    expect(normalizeAnswer('T-cell')).toBe('tcell');
-    // "T cell" and "T-cell" are not the same string, so this is left to Gemini
+  it('treats hyphenated and spaced variants as different strings', () => {
+    expect(normalizeAnswer('T-cell')).toBe('t-cell');
+    // "T cell" and "T-cell" are not the same string, so this is left to the model
     expect(checkExactMatch('T cell', 'T-cell')).toBeNull();
+  });
+
+  it('keeps symbols that carry meaning instead of stripping them', () => {
+    // real bug: "city$" and "$city" both normalised to "city", so the wrong
+    // answer to "which is a valid PHP variable name?" was marked correct
+    expect(checkExactMatch('city$', '$city')).toBeNull();
+    expect(checkExactMatch('$city', '$1city')).toBeNull();
+    expect(normalizeAnswer('city$')).toBe('city$');
+    expect(normalizeAnswer('$city')).toBe('$city');
+
+    // the same class of mistake for other subjects
+    expect(checkExactMatch('50', '50%')).toBeNull();
+    expect(checkExactMatch('a', 'a*')).toBeNull();
+    expect(checkExactMatch('x', 'x^2')).toBeNull();
+    expect(checkExactMatch('cityname', 'city_name')).toBeNull();
+  });
+
+  it('still ignores ordinary punctuation and spacing', () => {
+    expect(checkExactMatch('$city.', '$city')?.isCorrect).toBe(true);
+    expect(checkExactMatch('  $City  ', '$city')?.isCorrect).toBe(true);
   });
 
   it('detects exact matches', () => {
