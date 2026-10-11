@@ -2,6 +2,8 @@
 
 A visual novel-style flashcard study app built with React, TypeScript, and Vite. Kimika Tachibana from _Wonderful Everyday_ (_Subarashiki Hibi_) reacts to how you are doing in the session.
 
+![Study Everyday - answering a question with Kimika reacting](docs/game.png)
+
 ## What it does
 
 - Main menu and study screens styled after a visual novel title/options layout
@@ -16,6 +18,14 @@ A visual novel-style flashcard study app built with React, TypeScript, and Vite.
 - After a session, results are saved in `localStorage` so you can open them from Load
 
 You need an API key for whichever provider you pick — [Google AI Studio](https://aistudio.google.com/app/apikey) or the [DeepSeek Platform](https://platform.deepseek.com/api_keys). Keys are stored in `sessionStorage` for the current tab only, one per provider, and are sent straight from your browser to that provider. There is no backend of our own.
+
+## After a session
+
+Every session is saved, so you can review what you missed or replay a deck. Saved summaries open from the Load screen, laid out like a visual novel save menu.
+
+| Summary                                                                   | Load                                                                    |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| ![Summary screen with accuracy and per-question review](docs/summary.png) | ![Load screen with saved sessions in date-stamped slots](docs/load.png) |
 
 ## Run it locally
 
@@ -44,4 +54,4 @@ npm run build
 
 ## Project layout
 
-Most of the UI lives in `src/screens`, with the smaller pieces (`KimikaSprite`, `ObjectiveAnswerOptions`, `ResultFeedback`, `FeatherGraphic`) sitting next to them in `src`. Game state is in `GameContext.tsx`. Model calls and the provider settings are in `gemini.ts`, with the model list in `streak.ts`. File parsing is in `parseFiles.ts`, streak and sprite logic in `streak.ts` and `sprites.ts`, and saved sessions in `storage.ts`. The files under `src/test` cover the grading, streak and sprite helpers.
+Most of the UI lives in `src/screens`, with the smaller pieces (`KimikaSprite`, `ObjectiveAnswerOptions`, `ResultFeedback`, `FeatherGraphic`) sitting next to them in `src`. Game state is in `GameContext.tsx`. Model calls and the provider settings are in `models.ts`, with the model list in `streak.ts`. File parsing is in `parseFiles.ts`, streak and sprite logic in `streak.ts` and `sprites.ts`, and saved sessions in `storage.ts`. The files under `src/test` cover grading, streaks, sprites, both providers, and one full session played end to end.
