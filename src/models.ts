@@ -8,17 +8,15 @@ Each card MUST have:
 - "question": a clear question
 - "answer": the exact correct option string
 - "options": exactly 4 distinct choices, including the correct answer
-- "explanation": a short reason the answer is correct
-- "sourceTopic": the topic the question came from
+- "explanation": one short sentence on why the answer is correct
 
-Return ONLY a JSON array:
+Keep every string brief. Return ONLY a JSON array:
 [
   {
     "question": "string",
     "answer": "string",
     "options": ["Option A", "Option B", "Option C", "Option D"],
-    "explanation": "string",
-    "sourceTopic": "string"
+    "explanation": "string"
   }
 ]
 No markdown, no extra text.`,
@@ -314,9 +312,9 @@ ${options.extractedContext.slice(0, 50000)}`;
 
   const modelId = options.model || DEFAULT_MODEL;
   const reply = await callModel(options.apiKey, modelId, PROMPTS.generateCardsSystem, userPrompt, {
-    // a 25 card deck with explanations is a long reply, and DeepSeek counts its
-    // reasoning tokens against this limit as well
-    maxTokens: 8000,
+    // a 25 card deck is a long reply, and DeepSeek counts its reasoning tokens
+    // against this limit as well, so 3500 (and then 8000) still ran out
+    maxTokens: 16000,
     // making cards does not need a reasoning pass, and skipping it leaves the
     // whole budget for the JSON so the reply is less likely to be cut off
     disableThinking: true,

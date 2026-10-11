@@ -25,6 +25,33 @@ describe('provider routing', () => {
 });
 
 describe('generateFlashcards', () => {
+  it('asks for a big enough budget that a long deck is not cut off', async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+
+    vi.stubGlobal('fetch', (_url: string, init: RequestInit) => {
+      capturedBody = JSON.parse(init.body as string);
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: '[]' }, finish_reason: 'stop' }],
+        }),
+      });
+    });
+
+    await expect(
+      generateFlashcards({
+        apiKey: 'sk-test',
+        model: 'deepseek-flash',
+        extractedContext: 'notes',
+        cardCount: 25,
+      })
+    ).rejects.toThrow(); // empty array is rejected, but the request still went out
+
+    // DeepSeek counts reasoning tokens against max_tokens, so this cannot be small
+    expect(capturedBody!.max_tokens).toBeGreaterThanOrEqual(16000);
+    expect(capturedBody!.model).toBe('deepseek-flash');
+  });
+
   it('does not always put the correct answer in the first slot', async () => {
     const cardJson = JSON.stringify([
       {
