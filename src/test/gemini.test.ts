@@ -14,6 +14,8 @@ describe('provider routing', () => {
       expect(provider).toBe(model.provider);
       expect(PROVIDERS[provider].label).toBeTruthy();
       expect(PROVIDERS[provider].keyLink).toMatch(/^https:\/\//);
+      // the picker shows this under the model name, so it must not be blank
+      expect(model.note.trim()).not.toBe('');
     }
   });
 

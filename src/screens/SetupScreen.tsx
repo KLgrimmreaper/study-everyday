@@ -182,19 +182,29 @@ export const SetupScreen: React.FC = () => {
           <span className="w-full md:w-64 font-bold text-sm md:text-base text-white drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
             •Model
           </span>
-          <div className="flex flex-wrap items-center gap-2 text-sm md:text-base drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
-            {AI_MODELS.map((model, idx) => (
-              <React.Fragment key={model.id}>
-                {idx > 0 && <span className="text-[#123652] font-black">/</span>}
-                <button
-                  type="button"
-                  onClick={() => setSelectedModel(model.id)}
-                  className={navLinkClass(selectedModel === model.id)}
-                >
-                  {model.name}
-                </button>
-              </React.Fragment>
-            ))}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm md:text-base drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
+            {AI_MODELS.map((model, idx) => {
+              const isActive = selectedModel === model.id;
+              return (
+                <React.Fragment key={model.id}>
+                  {idx > 0 && <span className="text-[#123652] font-black">/</span>}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedModel(model.id)}
+                    className={`text-left ${navLinkClass(isActive)}`}
+                  >
+                    <span className="block">{model.name}</span>
+                    <span
+                      className={`block text-[10px] font-normal not-italic ${
+                        isActive ? 'text-white/70' : 'text-[#a8c8e0]'
+                      }`}
+                    >
+                      {model.note}
+                    </span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
 

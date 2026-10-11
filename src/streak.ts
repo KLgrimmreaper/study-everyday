@@ -21,12 +21,39 @@ export function getStreakTier(streakCount: number): StreakTier {
 
 export type Provider = 'gemini' | 'deepseek';
 
-export const AI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini' },
-  { id: 'gemini-flash-latest', name: 'Gemini Flash (Latest)', provider: 'gemini' },
-  { id: 'deepseek-flash', name: 'DeepSeek Flash', provider: 'deepseek' },
-  { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', provider: 'deepseek' },
-] as const;
+export interface AiModel {
+  id: string;
+  name: string;
+  note: string;
+  provider: Provider;
+}
+
+export const AI_MODELS: AiModel[] = [
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    note: 'fast and cheap',
+    provider: 'gemini',
+  },
+  {
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash Latest',
+    note: 'newest Gemini Flash',
+    provider: 'gemini',
+  },
+  {
+    id: 'deepseek-flash',
+    name: 'DeepSeek V4.1 Flash',
+    note: 'fast and cheap',
+    provider: 'deepseek',
+  },
+  {
+    id: 'deepseek-v4-pro',
+    name: 'DeepSeek V4 Pro',
+    note: 'slower and pricier, more accurate',
+    provider: 'deepseek',
+  },
+];
 
 export const DEFAULT_MODEL = 'gemini-2.5-flash';
 
