@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import { StreakTier } from './streak';
 
 export interface Flashcard {
@@ -25,7 +24,6 @@ export interface GradingResult {
   suggestedImprovement?: string;
 }
 
-// ------------------------------------------------------------
 export type GamePhase = 'asking' | 'evaluating' | 'correct' | 'wrong' | 'summary';
 
 export interface StreakState {

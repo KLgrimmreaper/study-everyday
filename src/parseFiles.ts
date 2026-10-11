@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import * as pdfjsLib from 'pdfjs-dist';
 import JSZip from 'jszip';
 
@@ -35,7 +34,6 @@ export async function parseDocumentFile(file: File): Promise<ParsedFileResult> {
   };
 }
 
-// ------------------------------------------------------------
 // Configure pdfjs worker for Vite client-side bundle
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
@@ -62,7 +60,6 @@ export async function parsePdfFile(file: File): Promise<string> {
   return textSnippets.join('\n\n');
 }
 
-// ------------------------------------------------------------
 export async function parsePptxFile(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const zip = await JSZip.loadAsync(arrayBuffer);
@@ -104,7 +101,6 @@ export async function parsePptxFile(file: File): Promise<string> {
   return slideTexts.join('\n\n');
 }
 
-// ------------------------------------------------------------
 export async function parseTextFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import { GradingResult } from './types';
 
 export function normalizeAnswer(text: string): string {
@@ -45,8 +44,6 @@ export function checkExactMatch(userAnswer: string, expectedAnswer: string): Gra
 
   return null;
 }
-
-// ------------------------------------------------------------
 
 export function getKimikaExplanation(
   userOption: string,

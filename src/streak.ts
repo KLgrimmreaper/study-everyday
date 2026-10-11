@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import { StreakState } from './types';
 
 export const STREAK_CONFIG = {
@@ -20,7 +19,6 @@ export function getStreakTier(streakCount: number): StreakTier {
   return 'nostreak';
 }
 
-// ------------------------------------------------------------
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 
 export const GEMINI_MODELS = [
@@ -28,7 +26,6 @@ export const GEMINI_MODELS = [
   { id: 'gemini-flash-latest', name: 'Gemini Flash (Latest)' },
 ];
 
-// ------------------------------------------------------------
 export const INITIAL_STREAK_STATE: StreakState = {
   currentWinStreak: 0,
   currentLoseStreak: 0,

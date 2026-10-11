@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import { getStreakTier } from './streak';
 import { GamePhase, KimikaSpriteInfo, StreakState } from './types';
 
@@ -77,7 +76,6 @@ export const BACKGROUNDS = [
   { id: 'rooftop', name: 'Rooftop (Sky View)', path: '/background/rooftop.png' },
 ] as const;
 
-// ------------------------------------------------------------
 export function selectKimikaSprite(
   phase: GamePhase,
   streakState: StreakState,

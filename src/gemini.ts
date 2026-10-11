@@ -1,4 +1,3 @@
-// ------------------------------------------------------------
 import { Flashcard, GradingResult } from './types';
 import { checkExactMatch } from './grading';
 import { DEFAULT_GEMINI_MODEL } from './streak';
@@ -48,7 +47,6 @@ export function cleanJsonResponse(raw: string): string {
   return cleaned.trim();
 }
 
-// ------------------------------------------------------------
 export interface GenerateCardsOptions {
   apiKey: string;
   model: string;
