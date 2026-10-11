@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGame } from '../GameContext';
 import { BACKGROUNDS } from '../sprites';
 import { generateFlashcards } from '../gemini';
+import { GEMINI_MODELS } from '../streak';
 import { parseDocumentFile, ParsedFileResult } from '../parseFiles';
 import { FeatherGraphic } from '../FeatherGraphic';
 
@@ -177,21 +178,18 @@ export const SetupScreen: React.FC = () => {
             •Gemini model
           </span>
           <div className="flex items-center gap-2 text-sm md:text-base drop-shadow-[1px_1px_1px_rgba(0,0,0,0.95)]">
-            <button
-              type="button"
-              onClick={() => setSelectedModel('gemini-2.5-flash')}
-              className={navLinkClass(selectedModel === 'gemini-2.5-flash')}
-            >
-              Gemini 2.5 Flash
-            </button>
-            <span className="text-[#123652] font-black">/</span>
-            <button
-              type="button"
-              onClick={() => setSelectedModel('gemini-flash-latest')}
-              className={navLinkClass(selectedModel === 'gemini-flash-latest')}
-            >
-              Gemini Flash Latest
-            </button>
+            {GEMINI_MODELS.map((model, idx) => (
+              <React.Fragment key={model.id}>
+                {idx > 0 && <span className="text-[#123652] font-black">/</span>}
+                <button
+                  type="button"
+                  onClick={() => setSelectedModel(model.id)}
+                  className={navLinkClass(selectedModel === model.id)}
+                >
+                  {model.name}
+                </button>
+              </React.Fragment>
+            ))}
           </div>
         </div>
 
