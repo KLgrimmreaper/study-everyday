@@ -32,7 +32,7 @@ Every session is saved, so you can review what you missed or replay a deck. Save
 Needs Node.js 18+ and npm.
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/KLgrimmreaper/study-everyday
 cd study-everyday
 npm install
 npm run dev
